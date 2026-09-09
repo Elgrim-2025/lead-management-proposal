@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리드 관리 시스템 제안 — 숫자가 한 곳에서만 나오는 구조</title>
+<meta name="description" content="광고매체 연동부터 계약 통계까지, 리드 한 건이 어떻게 쌓이고 어떻게 숫자가 되는지.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#ECEDE9;
+  --paper-2:#F6F7F4;
+  --panel:#FFFFFF;
+  --ink:#14181A;
+  --ink-2:#3E4644;
+  --muted:#7B8481;
+  --line:#D6D9D3;
+  --line-2:#E6E8E3;
+  --flow:#0F5C4E;
+  --flow-soft:#E1EDE8;
+  --warn:#B4531E;
+  --warn-soft:#F3E5DA;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  --serif:'Gowun Batang',var(--sans);
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:17px;line-height:1.65;
+  font-weight:400;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+section{padding:92px 0;border-top:1px solid var(--line)}
+section:first-of-type{border-top:0}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.02em}
+p{margin:0}
+a{color:var(--flow)}
+
+/* ---------- 공통 조판 ---------- */
+.sec-num{
+  font-family:var(--mono);font-size:12px;color:var(--muted);
+  display:block;margin-bottom:14px;letter-spacing:.04em;
+}
+h2{font-family:var(--serif);font-size:clamp(28px,3.6vw,44px);line-height:1.28;max-width:20ch}
+.lede{margin-top:18px;max-width:62ch;color:var(--ink-2);font-size:18px}
+.sys{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:-.01em}
+
+/* ---------- 지금 vs 이후 ---------- */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:44px}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:26px 26px 28px}
+.pane.now{background:var(--warn-soft);border-color:#E3CDBB}
+.pane h3{font-size:19px;margin-bottom:6px}
+.pane .tag{font-size:13px;color:var(--muted);margin-bottom:20px}
+.pane.now .tag{color:#9A5330}
+.stack{position:relative;height:96px;margin:22px 0 20px;
+  background:var(--paper-2);border:1px solid var(--line-2);border-radius:2px;
+  display:flex;align-items:center;justify-content:center}
+.pane.now .stack{background:#FBF3EC;border-color:#E8D5C4}
+.ghost{position:absolute;font-size:20px;font-weight:600;color:var(--warn);opacity:.16}
+.ghost.g1{transform:translate(-14px,-10px)}
+.ghost.g2{transform:translate(9px,4px);opacity:.28}
+.ghost.now{opacity:1;transform:none}
+.keep{width:100%;padding:0 16px}
+.keep div{display:flex;justify-content:space-between;font-size:13px;
+  font-family:var(--mono);color:var(--flow);padding:3px 0}
+.keep div span:last-child{color:var(--muted)}
+.pane ul{margin:0;padding-left:18px;font-size:15px;color:var(--ink-2)}
+.pane li{margin:9px 0}
+.pane.now li::marker{color:var(--warn)}
+.pane.next li::marker{color:var(--flow)}
+
+/* ---------- 니즈 3층 ---------- */
+.tiers{margin-top:48px;display:grid;gap:18px}
+.tier-label{font-size:13.5px;color:var(--muted);margin-bottom:12px}
+.goal{
+  background:var(--flow);color:#F2F7F5;border-radius:3px;padding:30px 32px;
+  display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:start;
+}
+.goal .no{font-family:var(--serif);font-size:44px;line-height:1;opacity:.5}
+.goal h3{font-family:var(--serif);font-size:25px;margin-bottom:10px}
+.goal p{font-size:15.5px;opacity:.86;max-width:60ch}
+.goal .check{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.22);
+  font-size:14px;opacity:.82}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:3px;
+  padding:22px 20px 20px;display:flex;flex-direction:column}
+.card .no{font-family:var(--serif);font-size:22px;color:var(--flow);line-height:1}
+.card h4{margin:12px 0 8px;font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.card p{font-size:14px;color:var(--ink-2);flex:1}
+.card .check{margin-top:16px;padding-top:12px;border-top:1px dotted var(--line);
+  font-size:12.8px;color:var(--muted);line-height:1.5}
+.card.pillar{border-left:3px solid var(--flow)}
+.card.cond{background:transparent;border-style:dashed}
+.card.cond .no{color:var(--muted);font-size:18px}
+.card.cond h4{font-size:15.5px}
+.jump{margin-top:14px;font-size:13px;color:var(--flow);background:none;border:0;
+  padding:0;cursor:pointer;font-family:var(--sans);text-align:left;
+  border-bottom:1px solid var(--flow-soft)}
+.jump:hover{border-bottom-color:var(--flow)}
+
+/* ---------- 플로우 ---------- */
+.flow{display:flex;align-items:stretch;gap:0;margin-top:46px}
+.fcol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}
+.fbox{background:var(--panel);border:1px solid var(--line);border-radius:3px;
+  padding:14px 14px 13px;flex:1;transition:box-shadow .25s,border-color .25s}
+.fbox.lit{border-color:var(--flow);box-shadow:0 0 0 3px var(--flow-soft)}
+.fbox .bn{display:inline-block;font-family:var(--serif);font-size:13px;color:var(--flow);
+  margin-bottom:6px}
+.fbox .nm{font-size:14.5px;font-weight:600;line-height:1.35}
+.fbox .sub{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+.fbox .sys{display:block;margin-top:7px}
+.fbox.core{background:var(--flow-soft);border-color:#B9D6CB}
+.fbox.rule{border-style:dashed}
+.fbox.later{background:transparent;border-style:dashed;opacity:.72}
+.farrow{flex:0 0 42px;display:flex;align-items:center;justify-content:center;color:var(--flow)}
+.farrow svg{width:22px;height:22px}
+.fcap{margin-top:20px;font-size:14px;color:var(--muted);max-width:70ch}
+.fcol-head{font-size:12.5px;color:var(--muted);margin-bottom:2px}
+
+/* ---------- 시뮬레이터 ---------- */
+.sim{background:var(--ink);color:#E8EBE9;border-top:0;padding:80px 0 96px}
+.simtitle{font-family:var(--serif);font-size:clamp(32px,4.8vw,56px);line-height:1.22;
+  color:#fff;margin:0;max-width:17ch}
+.simlede{margin-top:22px;max-width:60ch;color:#A9B2AE;font-size:18px}
+.simfoot{margin-top:26px;font-size:14.5px;color:#7C8683;max-width:64ch}
+.simbox{margin-top:40px;background:#1B2022;border:1px solid #2C3335;border-radius:4px;overflow:hidden}
+.simbar{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid #2C3335;
+  background:#171C1E;flex-wrap:wrap}
+.btn{font-family:var(--sans);font-size:14px;font-weight:600;border-radius:2px;cursor:pointer;
+  border:1px solid transparent;padding:9px 18px;background:var(--flow);color:#fff}
+.btn:hover{background:#0D6E5C}
+.btn.ghostb{background:transparent;border-color:#3A4245;color:#B9C1BE}
+.btn.ghostb:hover{background:#232A2C}
+.btn:focus-visible,.jump:focus-visible,.dot:focus-visible{outline:2px solid var(--flow);outline-offset:2px}
+.progress{flex:1;min-width:180px;display:flex;gap:5px;align-items:center}
+.dot{flex:1;height:5px;background:#333B3D;border:0;border-radius:2px;padding:0;cursor:pointer}
+.dot.done{background:#2F6A5C}
+.dot.cur{background:var(--flow)}
+.stepno{font-family:var(--mono);font-size:12px;color:#7C8683;white-space:nowrap}
+.simgrid{display:grid;grid-template-columns:1fr 1fr}
+.simleft{padding:26px 26px 30px;border-right:1px solid #2C3335;min-height:430px;
+  display:flex;flex-direction:column}
+.simright{padding:26px 26px 30px;min-height:430px;display:flex;flex-direction:column}
+.simhead{font-family:var(--serif);font-size:21px;color:#fff;line-height:1.35}
+.simnote{margin-top:10px;font-size:14.5px;color:#A9B2AE;min-height:46px;max-width:44ch}
+.simbadge{display:inline-block;font-family:var(--mono);font-size:11px;color:#8FD3BE;
+  border:1px solid #2F5B50;border-radius:2px;padding:2px 7px;margin-bottom:12px}
+.screens{margin-top:22px;flex:1;display:flex;align-items:center;justify-content:center}
+.screen{display:none;width:100%}
+.screen.on{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* 목업 */
+.phone{max-width:250px;margin:0 auto;background:#fff;border-radius:14px;padding:12px;
+  color:var(--ink);border:1px solid #333B3D}
+.phone .bar{height:4px;width:44px;background:#DCE0DD;border-radius:2px;margin:0 auto 12px}
+.adimg{height:96px;border-radius:6px;background:linear-gradient(120deg,#243B38,#4C6E63 60%,#8FA79E);
+  display:flex;align-items:flex-end;padding:9px;color:#fff;font-size:12px}
+.adtxt{font-size:13px;margin-top:10px;line-height:1.5}
+.adsrc{font-size:10.5px;color:var(--muted);margin-top:8px;font-family:var(--mono)}
+.adbtn{margin-top:10px;background:var(--flow);color:#fff;text-align:center;
+  font-size:12.5px;padding:8px;border-radius:4px}
+.field{margin-top:9px}
+.field label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:3px}
+.field .val{border:1px solid var(--line);border-radius:3px;padding:7px 9px;font-size:12.5px;
+  min-height:31px;background:var(--paper-2)}
+.field .val.filled{background:#fff;border-color:#B9D6CB}
+.caret{display:inline-block;width:1px;height:12px;background:var(--ink);
+  vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.utm{margin-top:12px;font-family:var(--mono);font-size:9.5px;color:var(--flow);
+  background:var(--flow-soft);padding:6px 7px;border-radius:3px;line-height:1.5;word-break:break-all}
+
+.app{background:#fff;color:var(--ink);border-radius:4px;overflow:hidden;border:1px solid #333B3D}
+.apphead{background:var(--paper-2);border-bottom:1px solid var(--line);padding:10px 14px;
+  font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.appbody{padding:16px}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:6px 12px;font-size:13px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:600}
+.kv dd.lock{color:var(--flow)}
+.lockrow{margin-top:14px;padding:9px 11px;background:var(--flow-soft);border-radius:3px;
+  font-size:12px;color:#0C4A3F}
+.calls{margin-top:14px;border-top:1px solid var(--line-2);padding-top:12px}
+.calls div{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;
+  border-bottom:1px dotted var(--line-2)}
+.calls .miss{color:var(--warn)}
+.oplist div{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+.pickbtn{font-size:11.5px;background:var(--flow);color:#fff;padding:5px 12px;border-radius:3px}
+.pickbtn.off{background:var(--paper-2);color:var(--muted)}
+.oplist .hi{background:var(--flow-soft);margin:0 -8px;padding:9px 8px;border-radius:3px}
+.contract{text-align:center;padding:18px 0}
+.contract .amt{font-family:var(--serif);font-size:34px;color:var(--flow)}
+.contract .who{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* 원장 */
+.ledgerhead{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;color:#8A9491;padding-bottom:10px;border-bottom:1px solid #2C3335}
+.ledger{margin-top:2px;flex:1;overflow:hidden}
+.lrow{display:grid;grid-template-columns:20px 116px 1fr;gap:12px;padding:9px 0;
+  border-bottom:1px dotted #2C3335;font-size:13.5px;align-items:baseline}
+.lrow .seq{font-family:var(--mono);font-size:11px;color:#5F6A67}
+.lrow .tbl{font-family:var(--mono);font-size:11px;color:#8FD3BE}
+.lrow .txt{color:#CFD6D3;line-height:1.5}
+.lrow .txt em{font-style:normal;color:#fff;font-weight:600}
+.lrow .txt small{display:block;color:#78827F;font-size:11.5px;margin-top:2px}
+.lrow.new{animation:rowIn .4s ease}
+.lrow.locked .seq::after{content:'·';margin-left:2px}
+.ledgerempty{color:#5F6A67;font-size:13.5px;padding:22px 0}
+.callout{margin-top:16px;border-left:2px solid var(--flow);padding:11px 14px;
+  background:#1F2628;font-size:13.5px;color:#BFE6D8;display:none}
+.callout.on{display:block;animation:fade .4s ease}
+
+/* 통계 */
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.stat{background:#1F2628;border:1px solid #2C3335;border-radius:3px;padding:14px}
+.stat .lab{font-size:11.5px;color:#8A9491;line-height:1.4;min-height:32px}
+.stat .num{font-family:var(--serif);font-size:23px;color:#fff;margin-top:6px}
+.stat.moved{border-color:var(--flow)}
+.stat.moved .num{color:#8FD3BE}
+.stat .delta{font-family:var(--mono);font-size:11px;color:#6E7A76;margin-top:2px;min-height:14px}
+.stat.moved .delta{color:#5FA893}
+
+/* ---------- 통계 해설 ---------- */
+.formula{margin-top:40px;display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.fitem{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:22px}
+.fitem h4{margin:0 0 10px;font-size:17px}
+.fitem .calc{font-size:14.5px;color:var(--flow);padding:10px 12px;background:var(--flow-soft);
+  border-radius:3px;line-height:1.5}
+.fitem .from{margin-top:12px;font-size:13.5px;color:var(--muted);line-height:1.55}
+.fitem .from code{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+
+/* ---------- 범위 ---------- */
+.scope{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:40px}
+.scope .col h3{font-size:18px;margin-bottom:4px}
+.scope .col .tag{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+.scope ul{list-style:none;margin:0;padding:0}
+.scope li{padding:12px 0;border-top:1px solid var(--line);font-size:15px;display:flex;gap:12px}
+.scope li .mk{color:var(--flow);font-family:var(--mono);font-size:12px;padding-top:4px}
+.scope .later li .mk{color:var(--muted)}
+.scope li small{display:block;color:var(--muted);font-size:12.8px;margin-top:2px}
+.budget{margin-top:24px;padding:16px 18px;background:var(--panel);border:1px solid var(--line);
+  border-radius:3px;font-size:14.5px;color:var(--ink-2);line-height:1.6}
+
+/* ---------- 조건 ---------- */
+.conds{margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.cond-item h4{font-size:16.5px;margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.cond-item ul{margin:0;padding-left:17px;font-size:14.5px;color:var(--ink-2)}
+.cond-item li{margin:8px 0}
+
+footer{border-top:1px solid var(--line);padding:40px 0 64px;font-size:13.5px;color:var(--muted)}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+@media (max-width:940px){
+  .hero-grid,.compare,.formula,.scope{grid-template-columns:1fr}
+  .grid4{grid-template-columns:1fr 1fr}
+  .conds{grid-template-columns:1fr}
+  .simgrid{grid-template-columns:1fr}
+  .simleft{border-right:0;border-bottom:1px solid #2C3335;min-height:0}
+  .simright{min-height:0}
+  .flow{flex-direction:column}
+  .farrow{flex:0 0 34px;transform:rotate(90deg)}
+  .statgrid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:560px){
+  body{font-size:16px}
+  .wrap{padding:0 18px}
+  section{padding:66px 0}
+  .grid4{grid-template-columns:1fr}
+  .goal{grid-template-columns:1fr;gap:14px}
+  .lrow{grid-template-columns:1fr;gap:3px}
+  .lrow .seq{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+  .hl-row{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 히어로 = 시뮬레이션 ============ -->
+<section class="sim" id="sim">
+<div class="wrap">
+  <h1 class="simtitle">리드 한 건이 계약이 되기까지<br>무엇이 남는가</h1>
+  <p class="simlede">8월 3일 오후, 페이스북 광고를 본 김도현 님. 담당자가 한 번 바뀌고, 오픈DB를 거쳐,
+    8월 11일에 계약합니다. 왼쪽은 그때 직원이 보는 화면, 오른쪽은 그때 남는 기록입니다.
+    열두 단계를 먼저 한 번 보시면 아래 설명이 훨씬 빨리 읽힙니다.</p>
+
+  <div class="simbox">
+    <div class="simbar">
+      <button class="btn" id="playBtn">재생</button>
+      <button class="btn ghostb" id="resetBtn">처음부터</button>
+      <div class="progress" id="progress" role="group" aria-label="단계 이동"></div>
+      <span class="stepno" id="stepno">1 / 12</span>
+    </div>
+    <div class="simgrid">
+      <div class="simleft">
+        <span class="simbadge" id="simBadge">①</span>
+        <div class="simhead" id="simHead"></div>
+        <p class="simnote" id="simNote"></p>
+        <div class="screens" id="screens">
+
+          <div class="screen" data-s="ad">
+            <div class="phone">
+              <div class="bar"></div>
+              <div class="adimg"><span>그랜저 IG 3.0 · 무사고</span></div>
+              <div class="adtxt">이번 주 입고 차량, 시세보다 낮게 나왔습니다. 상담 신청하면 바로 안내드려요.</div>
+              <div class="adsrc">Meta · 8월_그랜저_리타겟</div>
+              <div class="adbtn">상담 신청하기</div>
+            </div>
+          </div>
+
+          <div class="screen" data-s="form">
+            <div class="phone">
+              <div class="bar"></div>
+              <div style="font-size:13.5px;font-weight:700">상담 신청</div>
+              <div class="field"><label>이름</label><div class="val" id="f1"></div></div>
+              <div class="field"><label>연락처</label><div class="val" id="f2"></div></div>
+              <div class="field"><label>관심 차종</label><div class="val" id="f3"></div></div>
+              <div class="utm">utm_source=meta&amp;utm_campaign=aug_grandeur_rt&amp;utm_content=ad_04</div>
+              <div class="adbtn" id="submitBtn">신청 완료</div>
+            </div>
+          </div>
+
+          <div class="screen" data-s="inbox">
+            <div class="app">
+              <div class="apphead"><span>접수함</span><span class="sys">inbound_raw</span></div>
+              <div class="appbody">
+                <div class="utm" style="font-size:10.5px;background:var(--paper-2);color:var(--ink-2)">
+{ "external_id": "mt_88d31f04",<br>
+&nbsp;&nbsp;"source": "meta",<br>
+&nbsp;&nbsp;"campaign": "aug_grandeur_rt",<br>
+&nbsp;&nbsp;"name": "김도현",<br>
+&nbsp;&nbsp;"phone": "010-2847-****",<br>
+&nbsp;&nbsp;"model": "그랜저 IG",<br>
+&nbsp;&nbsp;"received_at": "2026-08-03 14:22:07" }
+                </div>
+                <div class="lockrow">원문을 그대로 보관합니다. 나중에 매체와 값이 안 맞을 때 여기로 돌아와 대조합니다.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen" data-s="crm">
+            <div class="app">
+              <div class="apphead"><span>고객 #2291 · 김도현</span><span class="sys">lead</span></div>
+              <div class="appbody">
+                <dl class="kv">
+                  <dt>최초 매체</dt><dd class="lock">Meta · 8월_그랜저_리타겟</dd>
+                  <dt>유입 시각</dt><dd class="lock">2026-08-03 14:22</dd>
+                  <dt>현재 담당</dt><dd id="crmOwner">이영준</dd>
+                  <dt>상태</dt><dd id="crmState">배정</dd>
+                </dl>
+                <div class="lockrow">위 두 줄은 이 카드가 만들어질 때 정해지고, 이후 어떤 일이 있어도 바뀌지 않습니다.</div>
+                <div class="calls" id="crmCalls"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen" data-s="open">
+            <div class="app">
+              <div class="apphead"><span>오픈DB · 박서연</span><span class="sys">open pool</span></div>
+              <div class="appbody">
+                <div class="oplist">
+                  <div><span>#2274 · 정민호 · 카니발</span><span class="pickbtn off">획득</span></div>
+                  <div class="hi"><span><b>#2291 · 김도현 · 그랜저 IG</b><br>
+                    <small style="color:var(--muted)">Meta 유입 · 부재 3회로 오픈</small></span>
+                    <span class="pickbtn" id="pickBtn">획득</span></div>
+                  <div><span>#2302 · 오세림 · 셀토스</span><span class="pickbtn off">획득</span></div>
+                </div>
+                <div class="lockrow">오늘 획득 2 / 5건 · 제한값은 시스템 관리에서 변경합니다</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen" data-s="contract">
+            <div class="app">
+              <div class="apphead"><span>계약 등록 · #2291</span><span class="sys">lead_event</span></div>
+              <div class="appbody contract">
+                <div class="amt">3,180만원</div>
+                <div class="who">그랜저 IG 3.0 · 2026-08-11 · 담당 박서연</div>
+                <div class="lockrow" style="text-align:left;margin-top:18px">
+                  계약 실적은 박서연 사원에게, 광고비는 최초 매체인 Meta에 붙습니다.
+                  두 값이 서로 다른 곳을 가리켜도 기록이 남아 있어 헷갈리지 않습니다.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="screen" data-s="stats">
+            <div class="app">
+              <div class="apphead"><span>통계</span><span class="sys">aggregate view</span></div>
+              <div class="appbody">
+                <dl class="kv">
+                  <dt>이 계약의 매체</dt><dd class="lock">Meta</dd>
+                  <dt>이 계약의 실적</dt><dd class="lock">박서연</dd>
+                  <dt>거쳐 간 담당자</dt><dd>이영준 → 박서연</dd>
+                  <dt>오픈DB 경유</dt><dd class="lock">예</dd>
+                </dl>
+                <div class="lockrow">네 줄 모두 기록에서 그대로 읽은 값입니다. 사람이 판단하거나 입력한 값이 아닙니다.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="simright">
+        <div class="ledgerhead"><span>남는 기록</span><span class="sys" style="color:#8FD3BE">append only</span></div>
+        <div class="ledger" id="ledger"><p class="ledgerempty">아직 아무 기록도 없습니다.</p></div>
+        <div class="callout" id="callout"></div>
+        <div class="statgrid" id="statgrid"></div>
+      </div>
+    </div>
+  </div>
+  <p class="simfoot">이 열두 줄이 어떻게 네 개의 숫자가 되는지,
+    그리고 공고에 적힌 요구사항 아홉 가지가 이 흐름의 어디에 놓이는지를 아래에서 이어 설명드립니다.</p>
+</div>
+</section>
+
+<!-- ============ 1. 지금 vs 이후 ============ -->
+<section>
+<div class="wrap">
+  <span class="sec-num">01</span>
+  <h2>방금 쌓인 열두 줄, 지금 시스템에는 한 줄만 남습니다</h2>
+  <p class="lede">지금은 한 칸에 최신 값만 덮어씁니다. 김도현 님 카드에는 담당자 박서연과 상태 계약만 남고,
+    이영준이 세 번 통화했다는 것도, 오픈DB를 거쳤다는 것도, Meta 광고에서 시작됐다는 것도 사라집니다.
+    그래서 월말에 엑셀로 다시 세는 것 말고는 방법이 없습니다.</p>
+
+  <div class="compare">
+    <div class="pane now">
+      <h3>지금</h3>
+      <p class="tag">담당자 칸 하나, 덮어쓰기</p>
+      <div class="stack">
+        <span class="ghost g1">이영준</span>
+        <span class="ghost g2">최민수</span>
+        <span class="ghost now">박서연</span>
+      </div>
+      <ul>
+        <li>앞의 두 사람이 이 고객에게 무엇을 했는지 알 수 없습니다</li>
+        <li>이 계약이 어느 광고에서 시작됐는지 추적이 끊깁니다</li>
+        <li>오픈DB로 돌았던 건인지도 남지 않습니다</li>
+        <li>결국 매달 수기 집계, 그리고 화면 숫자와 불일치</li>
+      </ul>
+    </div>
+    <div class="pane next">
+      <h3>이후</h3>
+      <p class="tag">기록을 한 줄씩 추가</p>
+      <div class="stack">
+        <div class="keep">
+          <div><span>배정 · 이영준</span><span>08-03</span></div>
+          <div><span>오픈DB 전환 · 시스템</span><span>08-05</span></div>
+          <div><span>Pick · 박서연</span><span>08-05</span></div>
+          <div><span>계약 · 박서연</span><span>08-11</span></div>
+        </div>
+      </div>
+      <ul>
+        <li>거쳐 간 담당자 전원과 각자의 활동이 남습니다</li>
+        <li>최초 유입 매체는 생성 시점에 고정되어 바뀌지 않습니다</li>
+        <li>오픈DB를 거친 계약을 따로 셀 수 있습니다</li>
+        <li>모든 화면이 이 기록 하나에서 계산되어 숫자가 어긋나지 않습니다</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 2. 니즈 ============ -->
+<section>
+<div class="wrap">
+  <span class="sec-num">02</span>
+  <h2>공고에 담긴 요구사항 아홉 가지</h2>
+  <p class="lede">하나는 최종 목표, 넷은 그 목표를 떠받치는 기둥, 넷은 지켜야 할 조건입니다.
+    각 항목에 <strong>검수할 때 확인하실 기준</strong>을 함께 적었습니다.</p>
+
+  <div class="tiers">
+    <div>
+      <p class="tier-label">사시는 것</p>
+      <div class="goal">
+        <div class="no">⓪</div>
+        <div>
+          <h3>수기 집계 없는 정확한 통계, 그리고 읽기 좋은 화면</h3>
+          <p>나머지 여덟 개는 전부 이것을 만들기 위한 수단입니다. 이력 구조도, 매체 연동도
+            그 자체가 목적이 아니라 이 숫자가 맞게 나오기 위한 준비입니다.</p>
+          <p class="check">확인 기준 — 매체별 계약률·직원별 전환율·오픈DB 재전환율·계약당 광고비가
+            자동으로 나오고, 손으로 센 결과와 일치한다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="tier-label">그것을 떠받치는 네 기둥</p>
+      <div class="grid4">
+        <div class="card pillar">
+          <div class="no">①</div>
+          <h4>광고매체에서 DB로</h4>
+          <p>Meta·구글·틱톡은 연동으로, 네이버·블로그는 랜딩폼과 UTM으로, 엔카·전화·기존 CRM은 수동과 파일로 들어옵니다.</p>
+          <p class="check">확인 — 매체별 유입 경로가 구분되고, 유실이나 중복 없이 최초 유입정보와 함께 등록된다.</p>
+          <button class="jump" data-lit="in">플로우에서 보기</button>
+        </div>
+        <div class="card pillar">
+          <div class="no">②</div>
+          <h4>최초 인입 이력 유지</h4>
+          <p>배정도 상담도 계약도 기록을 덮어쓰지 않고 한 줄씩 추가합니다. 최초 매체와 최초 담당자는 생성 시점에 고정됩니다.</p>
+          <p class="check">확인 — 한 고객이 거친 담당자 전체와 최초 유입이 언제 봐도 그대로 남아 있다.</p>
+          <button class="jump" data-lit="ledger">플로우에서 보기</button>
+        </div>
+        <div class="card pillar">
+          <div class="no">③</div>
+          <h4>오픈DB 운영 규칙</h4>
+          <p>조건별 자동 오픈, 직원별 일일 획득 제한, Pick 이력, 여러 번의 재배정. 리드를 조직 안에서 돌려 쓰는 방식 자체를 규칙으로 만듭니다.</p>
+          <p class="check">확인 — 전환 조건과 획득 제한을 관리자가 화면에서 바꾸면 그대로 동작하고, 이력이 남는다.</p>
+          <button class="jump" data-lit="rule">플로우에서 보기</button>
+        </div>
+        <div class="card pillar">
+          <div class="no">④</div>
+          <h4>기존 CRM 데이터 이관</h4>
+          <p>지금 데이터에는 최초 유입과 최초 담당자가 없습니다. 이관 건임을 표시해 두지 않으면 새 통계가 첫 달부터 오염됩니다.</p>
+          <p class="check">확인 — 이관 리드가 들어오되, 통계에서 분리 표시하거나 제외할 수 있다.</p>
+          <button class="jump" data-lit="in">플로우에서 보기</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="tier-label">지켜야 할 조건</p>
+      <div class="grid4">
+        <div class="card cond">
+          <div class="no">⑤</div>
+          <h4>개발사 없이 운영</h4>
+          <p>상태값·광고매체·오픈 조건을 코드 수정 없이 화면에서 바꿉니다. 매뉴얼과 소스는 발주사 저장소로 인계합니다.</p>
+          <p class="check">확인 — 납품 후 저희 없이 설정 변경과 배포가 가능하다.</p>
+        </div>
+        <div class="card cond">
+          <div class="no">⑥</div>
+          <h4>개인정보 보안과 기록</h4>
+          <p>권한별 접근 통제, 변경 이력, 접속기록 보관, 백업. 설치 위치는 근거와 함께 제안드립니다.</p>
+          <p class="check">확인 — 누가 언제 무엇을 보고 바꿨는지 조회된다.</p>
+        </div>
+        <div class="card cond">
+          <div class="no">⑦</div>
+          <h4>25명에서 50~100명으로</h4>
+          <p>서버 문제가 아니라 조직 구조 문제입니다. 팀과 팀장 단위 권한, 팀 단위 통계가 지금은 없습니다.</p>
+          <p class="check">확인 — 팀 개념을 추가해도 기존 구조를 뜯지 않는다.</p>
+        </div>
+        <div class="card cond">
+          <div class="no">⑧</div>
+          <h4>1차와 추후의 구분</h4>
+          <p>예산과 기간 안에서 지금 만들 것과, 나중에 붙일 것을 나눕니다. 붙을 자리를 지금 만들어 둡니다.</p>
+          <p class="check">확인 — 문자·알림톡·콜 연동·전환측정이 어디에 어떻게 추가되는지 설계에 보인다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ 3. 플로우 ============ -->
+<section id="flow">
+<div class="wrap">
+  <span class="sec-num">03</span>
+  <h2>아홉 개를 한 번에 푸는 한 문장</h2>
+  <p class="lede">쓰기는 한 곳으로만 들어오고, 읽기는 전부 거기서 파생됩니다.
+    화살표가 왼쪽으로 되돌아가는 곳이 한 군데도 없다는 점을 봐 주십시오.
+    큰 글씨는 영업 현장의 말, 작은 글씨는 시스템에서 부르는 이름입니다.</p>
+
+  <div class="flow">
+    <div class="fcol" data-lit="in">
+      <p class="fcol-head">들어오는 곳</p>
+      <div class="fbox">
+        <span class="bn">①</span>
+        <div class="nm">광고 연동</div>
+        <div class="sub">Meta · 구글 · 틱톡</div>
+        <span class="sys">webhook adapter</span>
+      </div>
+      <div class="fbox">
+        <span class="bn">①</span>
+        <div class="nm">랜딩폼</div>
+        <div class="sub">네이버 · 블로그, UTM 동반</div>
+        <span class="sys">form + utm</span>
+      </div>
+      <div class="fbox">
+        <span class="bn">①④</span>
+        <div class="nm">수동 · 파일 · 이관</div>
+        <div class="sub">엔카 · 전화 · 기존 CRM</div>
+        <span class="sys">csv import · migrated=true</span>
+      </div>
+    </div>
+
+    <div class="farrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h17M14 6l6 6-6 6"/></svg></div>
+
+    <div class="fcol">
+      <p class="fcol-head">받는 곳</p>
+      <div class="fbox">
+        <span class="bn">①</span>
+        <div class="nm">접수함</div>
+        <div class="sub">가공 전 원문을 먼저 저장. 같은 신청이 두 번 와도 한 건으로.</div>
+        <span class="sys">inbound_raw · external_id unique</span>
+      </div>
+      <div class="fbox core">
+        <span class="bn">②</span>
+        <div class="nm">고객 카드 생성</div>
+        <div class="sub">최초 매체 · 캠페인 · 최초 담당자 · 유입 시각을 이 순간 고정</div>
+        <span class="sys">lead</span>
+      </div>
+    </div>
+
+    <div class="farrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h17M14 6l6 6-6 6"/></svg></div>
+
+    <div class="fcol" data-lit="ledger">
+      <p class="fcol-head">쌓이는 곳 — 추가만 되고 수정·삭제되지 않습니다</p>
+      <div class="fbox core">
+        <span class="bn">②</span>
+        <div class="nm">배정 기록</div>
+        <div class="sub">담당자가 바뀔 때마다 새 줄이 추가됩니다</div>
+        <span class="sys">lead_assignment</span>
+      </div>
+      <div class="fbox core">
+        <span class="bn">②</span>
+        <div class="nm">활동 기록</div>
+        <div class="sub">통화 · 부재 · 견적 · 오픈전환 · Pick · 계약 · 취소 · 출고</div>
+        <span class="sys">lead_event</span>
+      </div>
+      <div class="fbox rule" data-lit="rule">
+        <span class="bn">③</span>
+        <div class="nm">오픈DB 규칙</div>
+        <div class="sub">기록을 읽고, 조건이 맞으면 새 기록을 씁니다. 조건과 획득 제한은 관리자 설정값.</div>
+        <span class="sys">rule engine ← system_config ⑤</span>
+      </div>
+    </div>
+
+    <div class="farrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h17M14 6l6 6-6 6"/></svg></div>
+
+    <div class="fcol">
+      <p class="fcol-head">계산되는 곳</p>
+      <div class="fbox">
+        <span class="bn">⓪</span>
+        <div class="nm">집계</div>
+        <div class="sub">매체별 · 직원별 · 팀별 ⑦ · 오픈DB별</div>
+        <span class="sys">aggregate view</span>
+      </div>
+      <div class="fbox">
+        <span class="bn">⓪</span>
+        <div class="nm">광고비 입력</div>
+        <div class="sub">일자별 매체 집행액. 계약당 광고비의 분자.</div>
+        <span class="sys">ad_spend_daily</span>
+      </div>
+      <div class="fbox later">
+        <span class="bn">⑧</span>
+        <div class="nm">추후 — 전환 측정</div>
+        <div class="sub">계약 기록을 구독해 매체로 되돌려 보냄</div>
+        <span class="sys">conversion api</span>
+      </div>
+    </div>
+
+    <div class="farrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h17M14 6l6 6-6 6"/></svg></div>
+
+    <div class="fcol">
+      <p class="fcol-head">보시는 곳</p>
+      <div class="fbox core">
+        <span class="bn">⓪</span>
+        <div class="nm">대시보드와 통계</div>
+        <div class="sub">읽기만 합니다. 화면에서 계산하지 않으므로 화면마다 숫자가 달라질 수 없습니다.</div>
+        <span class="sys">read-only</span>
+      </div>
+      <div class="fbox later">
+        <span class="bn">⑧</span>
+        <div class="nm">추후 — 문자 · 알림톡 · 콜</div>
+        <div class="sub">활동 기록에 종류만 추가되는 형태라 구조를 바꾸지 않습니다</div>
+        <span class="sys">new event type</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="fcap">매체가 늘거나 API가 바뀌면 맨 왼쪽 상자만 손봅니다. 오픈DB 규칙이 바뀌면 가운데 상자의 설정값만 바꿉니다.
+    어느 쪽도 이미 쌓인 기록의 모양을 바꾸지 않기 때문에, 작년 통계와 올해 통계를 같은 기준으로 비교할 수 있습니다.</p>
+</div>
+</section>
+
+<!-- ============ 5. 통계 ============ -->
+<section>
+<div class="wrap">
+  
+  <h2>그래서 네 개의 숫자가 이렇게 나옵니다</h2>
+  <p class="lede">모두 방금 쌓인 기록에서 계산됩니다. 별도 입력이나 월말 정리 작업이 없습니다.</p>
+
+  <div class="formula">
+    <div class="fitem">
+      <h4>광고매체별 계약률</h4>
+      <p class="calc">그 매체로 들어온 고객 중 계약까지 간 비율</p>
+      <p class="from">고객 카드의 <code>최초 매체</code>로 묶고, 활동 기록의 계약 건을 셉니다.
+        담당자가 몇 번 바뀌었든 최초 매체는 고정이므로 매체 성과가 섞이지 않습니다.</p>
+    </div>
+    <div class="fitem">
+      <h4>직원별 전환율</h4>
+      <p class="calc">그 직원이 담당한 고객 중 그 직원이 계약시킨 비율</p>
+      <p class="from">배정 기록으로 담당 구간을 나누고, 그 구간 안의 계약을 셉니다.
+        앞 담당자의 리드를 받아 계약해도 실적은 실제 계약자에게 갑니다.</p>
+    </div>
+    <div class="fitem">
+      <h4>오픈DB 재전환율</h4>
+      <p class="calc">오픈DB로 돌아간 고객 중 다시 계약된 비율</p>
+      <p class="from">오픈전환 기록이 있는 고객만 모아 계산합니다.
+        리드를 돌려 쓰는 운영이 실제로 돈이 되는지가 여기서 보입니다.</p>
+    </div>
+    <div class="fitem">
+      <h4>계약당 광고비</h4>
+      <p class="calc">매체 집행액 ÷ 그 매체에서 나온 계약 수</p>
+      <p class="from">일자별 광고비 입력값과 매체별 계약 수를 나눕니다.
+        매체를 늘릴지 줄일지 판단하는 숫자가 매일 갱신됩니다.</p>
+    </div>
+  </div>
+
+  <div class="budget">모든 화면이 같은 기록에서 파생되므로 <strong>매체별 리드 수의 합이 전체 리드 수와 반드시 같습니다</strong>.
+    이런 검산이 가능하다는 것이 곧 통계를 믿을 수 있다는 뜻입니다. 검수 때 이 항목부터 확인해 주십시오.</div>
+</div>
+</section>
+
+<!-- ============ 6. 범위 ============ -->
+<section>
+<div class="wrap">
+  
+  <h2>지금 만들 것과 나중에 붙일 것</h2>
+  <p class="lede">예산과 기간 안에서 1차에 반드시 들어가야 하는 것을 먼저 확정하고,
+    나머지는 나중에 붙을 자리만 지금 만들어 둡니다.</p>
+
+  <div class="scope">
+    <div class="col">
+      <h3>1차 구축</h3>
+      <p class="tag">계약 기간 내 납품</p>
+      <ul>
+        <li><span class="mk">①</span><span>광고매체 연동과 랜딩폼 수집<small>Meta 연동 · 랜딩폼 UTM · 수동 등록 · CSV 일괄 등록</small></span></li>
+        <li><span class="mk">②</span><span>고객 카드와 활동 기록 구조<small>배정 이력 · 상태 변경 · 상담 기록 · 계약</small></span></li>
+        <li><span class="mk">③</span><span>오픈DB 자동 전환과 획득 제한<small>조건 설정 · Pick · 재배정 · 일일 제한</small></span></li>
+        <li><span class="mk">④</span><span>기존 CRM 데이터 이관<small>이관 표시와 통계 분리 옵션 포함</small></span></li>
+        <li><span class="mk">⓪</span><span>대시보드와 네 개 지표<small>광고비 입력 화면 포함</small></span></li>
+        <li><span class="mk">⑤⑥</span><span>시스템 관리와 권한·기록<small>상태값·매체·조건 설정 · 접근 권한 · 접속기록 · 백업</small></span></li>
+      </ul>
+    </div>
+    <div class="col later">
+      <h3>추후 확장</h3>
+      <p class="tag">1차 구조 위에 그대로 추가됩니다</p>
+      <ul>
+        <li><span class="mk">⑧</span><span>문자 · 알림톡 발송<small>활동 기록에 종류 하나 추가</small></span></li>
+        <li><span class="mk">⑧</span><span>콜 시스템 연동<small>통화 기록을 활동 기록으로 수신</small></span></li>
+        <li><span class="mk">⑧</span><span>매체 전환 측정 회신<small>계약 기록을 매체로 되돌려 보냄</small></span></li>
+        <li><span class="mk">⑦</span><span>팀 단위 권한과 통계<small>직원에 팀 정보 추가 · 집계 기준 한 단계 확장</small></span></li>
+        <li><span class="mk">⑧</span><span>출고·정산 관리<small>계약 이후 단계를 활동 기록으로 이어서 관리</small></span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="budget">추후 항목은 전부 <strong>새 기능을 붙이는 일</strong>이지, 이미 만든 것을 뜯는 일이 아닙니다.
+    위 플로우 도식에서 점선으로 표시된 자리가 그 자리입니다. 1차에서 만들지 않아도 자리는 비워 둡니다.</div>
+</div>
+</section>
+
+<!-- ============ 7. 조건 ============ -->
+<section>
+<div class="wrap">
+  
+  <h2>납품 이후에도 굴러가도록</h2>
+
+  <div class="conds">
+    <div class="cond-item">
+      <h4>⑤ 개발사 없이 운영</h4>
+      <ul>
+        <li>상태값, 광고매체, 오픈 조건, 획득 제한을 관리 화면에서 변경</li>
+        <li>배포와 운영 절차를 문서로 인계</li>
+        <li>소스는 발주사 저장소에 귀속</li>
+        <li>인계 시 담당자 대상 사용 교육</li>
+      </ul>
+    </div>
+    <div class="cond-item">
+      <h4>⑥ 개인정보와 기록</h4>
+      <ul>
+        <li>역할별 접근 권한, 연락처 마스킹 정책</li>
+        <li>기록 구조 자체가 변경 이력이라 별도 감사 테이블이 필요 없음</li>
+        <li>접속기록 보관 및 조회 화면</li>
+        <li>일 단위 백업과 복구 절차, 설치 위치는 근거와 함께 제안</li>
+      </ul>
+    </div>
+    <div class="cond-item">
+      <h4>⑦ 인원 확장</h4>
+      <ul>
+        <li>직원에 팀 정보를 더하면 팀 통계는 집계 기준 한 줄 차이</li>
+        <li>팀장 권한은 기존 권한 체계 위에 한 단계 추가</li>
+        <li>기록 구조는 그대로 두고 읽는 방식만 확장</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>리드 관리 시스템 구축 제안 · 요구사항 ⓪–⑧ 대응</span>
+    <span>화면의 인물·금액·통계 수치는 설명을 위한 예시입니다</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- 니즈 → 플로우 하이라이트 ---------- */
+  document.querySelectorAll('.jump').forEach(function(b){
+    b.addEventListener('click', function(){
+      var key = b.dataset.lit;
+      document.getElementById('flow').scrollIntoView({block:'start'});
+      document.querySelectorAll('.fbox.lit').forEach(function(e){e.classList.remove('lit');});
+      var target = document.querySelector('[data-lit="'+key+'"]');
+      if(!target) return;
+      var boxes = target.classList.contains('fbox') ? [target] : target.querySelectorAll('.fbox');
+      setTimeout(function(){
+        boxes.forEach(function(e){ e.classList.add('lit'); });
+        setTimeout(function(){ boxes.forEach(function(e){ e.classList.remove('lit'); }); }, 2600);
+      }, 420);
+    });
+  });
+
+  /* ---------- 시뮬레이션 데이터 ---------- */
+  var BASE = [
+    {lab:'Meta 계약률', v:'6.8%'},
+    {lab:'박서연 전환율', v:'11.2%'},
+    {lab:'오픈DB 재전환율', v:'18.4%'},
+    {lab:'계약당 광고비', v:'42.8만'}
+  ];
+  var FINAL = [
+    {lab:'Meta 계약률', v:'6.9%', d:'+0.1'},
+    {lab:'박서연 전환율', v:'11.5%', d:'+0.3'},
+    {lab:'오픈DB 재전환율', v:'18.7%', d:'+0.3'},
+    {lab:'계약당 광고비', v:'42.5만', d:'-0.3'}
+  ];
+
+  var STEPS = [
+    {s:'ad', b:'①', h:'8월 3일 오후 2시, 광고를 봅니다',
+     n:'리타게팅 광고를 클릭합니다. 이 시점에 우리 시스템에는 아직 아무것도 없습니다.', rows:[]},
+    {s:'form', b:'①', h:'랜딩페이지에서 상담을 신청합니다',
+     n:'입력값과 함께 어느 광고에서 왔는지가 주소에 실려 옵니다. 이 값이 최초 유입 정보가 됩니다.', rows:[], type:true},
+    {s:'inbox', b:'①', h:'들어온 내용이 먼저 접수함에 저장됩니다',
+     n:'가공하기 전에 원문부터 남깁니다. 같은 신청이 두 번 들어와도 한 건으로 처리됩니다.',
+     rows:[['inbound_raw','접수 · Meta 폼 응답 <em>mt_88d31f04</em>','원문 그대로 보관 · 중복 차단']]},
+    {s:'crm', b:'②', h:'고객 카드가 만들어집니다',
+     n:'최초 매체, 캠페인, 유입 시각이 이 순간 정해집니다. 이후 무슨 일이 있어도 이 세 값은 바뀌지 않습니다.',
+     rows:[['lead','고객 <em>#2291 김도현</em> 생성','최초 매체 Meta · 8월_그랜저_리타겟 · 08-03 14:22']]},
+    {s:'crm', b:'③', h:'이영준 사원에게 자동 배정',
+     n:'자동 배정 규칙에 따라 담당이 정해지고, 배정 기록 한 줄이 생깁니다.',
+     rows:[['lead_assignment','배정 #1 · <em>이영준</em>','자동 배정 규칙']], owner:'이영준', state:'배정'},
+    {s:'crm', b:'②', h:'1차 통화 — 부재',
+     n:'통화 결과도 기록입니다. 상태 칸을 고쳐 쓰는 대신 줄이 하나 늘어납니다.',
+     rows:[['lead_event','1차 통화 · <em>부재</em>','08-03 15:10 · 이영준']], calls:1},
+    {s:'crm', b:'②', h:'2차, 3차 통화도 부재',
+     n:'같은 칸을 세 번 덮어쓴 게 아니라, 세 줄이 나란히 남습니다.',
+     rows:[['lead_event','2차 통화 · <em>부재</em>','08-04 11:35 · 이영준'],
+           ['lead_event','3차 통화 · <em>부재</em>','08-05 09:48 · 이영준']], calls:3},
+    {s:'open', b:'③', h:'부재 3회. 시스템이 오픈DB로 돌립니다',
+     n:'사람이 옮긴 게 아니라 규칙이 옮겼습니다. 몇 회에 오픈할지는 관리 화면에서 바꿀 수 있는 설정값입니다.',
+     rows:[['lead_event','<em>오픈DB 전환</em>','08-05 09:50 · 시스템 · 조건: 부재 3회']], state:'오픈DB'},
+    {s:'open', b:'③', h:'박서연 사원이 가져갑니다',
+     n:'여기가 이 시스템의 핵심입니다. 이영준의 배정 기록 #1은 지워지지 않습니다. 두 번째 배정 기록이 아래에 추가될 뿐입니다.',
+     rows:[['lead_event','<em>Pick</em> · 박서연','오늘 획득 3 / 5건'],
+           ['lead_assignment','배정 #2 · <em>박서연</em>','배정 #1 이영준 기록은 그대로 유지']],
+     owner:'박서연', state:'상담중', pick:true,
+     call:'지금 이 고객에게는 담당자가 두 명 기록되어 있습니다. 나중에 “이 계약이 원래 누구 리드였나”를 물어도 답이 남아 있습니다.'},
+    {s:'crm', b:'②', h:'견적서 발송',
+     n:'박서연 사원이 상담을 이어갑니다. 이전 담당자가 무엇을 했는지 화면에서 그대로 보입니다.',
+     rows:[['lead_event','견적서 발송 · 그랜저 IG 3.0','08-07 16:02 · 박서연']], owner:'박서연', state:'견적'},
+    {s:'contract', b:'②', h:'8월 11일, 계약',
+     n:'계약도 하나의 기록입니다. 취소나 출고가 생기면 그 아래에 또 한 줄이 붙습니다.',
+     rows:[['lead_event','<em>계약</em> · 3,180만원','08-11 13:20 · 박서연']], owner:'박서연', state:'계약'},
+    {s:'stats', b:'⓪', h:'그리고 숫자가 움직입니다',
+     n:'열두 줄의 기록에서 네 개 지표가 자동으로 계산됩니다. 아무도 엑셀을 열지 않았습니다.',
+     rows:[], stats:true,
+     call:'계약 실적은 박서연에게, 광고비는 최초 매체인 Meta에 붙습니다. 담당자가 바뀌었다고 매체 성과가 사라지지 않는 이유가 이것입니다.'}
+  ];
+
+  /* ---------- DOM ---------- */
+  var ledger = document.getElementById('ledger'),
+      statgrid = document.getElementById('statgrid'),
+      callout = document.getElementById('callout'),
+      simHead = document.getElementById('simHead'),
+      simNote = document.getElementById('simNote'),
+      simBadge = document.getElementById('simBadge'),
+      stepno = document.getElementById('stepno'),
+      progress = document.getElementById('progress'),
+      playBtn = document.getElementById('playBtn'),
+      resetBtn = document.getElementById('resetBtn'),
+      screens = document.querySelectorAll('.screen'),
+      crmOwner = document.getElementById('crmOwner'),
+      crmState = document.getElementById('crmState'),
+      crmCalls = document.getElementById('crmCalls'),
+      pickBtn = document.getElementById('pickBtn');
+
+  var cur = -1, timer = null, typing = [], playing = false;
+
+  STEPS.forEach(function(_,i){
+    var b = document.createElement('button');
+    b.className = 'dot'; b.type='button';
+    b.setAttribute('aria-label', (i+1)+'단계로 이동');
+    b.addEventListener('click', function(){ stop(); go(i); });
+    progress.appendChild(b);
+  });
+  var dots = progress.querySelectorAll('.dot');
+
+  function renderStats(moved){
+    var src = moved ? FINAL : BASE;
+    statgrid.innerHTML = '';
+    src.forEach(function(s){
+      var d = document.createElement('div');
+      d.className = 'stat' + (moved ? ' moved' : '');
+      d.innerHTML = '<div class="lab">'+s.lab+'</div><div class="num">'+s.v+'</div>'+
+                    '<div class="delta">'+(moved && s.d ? s.d+'p' : '')+'</div>';
+      statgrid.appendChild(d);
+    });
+  }
+
+  function renderCalls(n){
+    var t = ['1차 통화 · 08-03','2차 통화 · 08-04','3차 통화 · 08-05'];
+    crmCalls.innerHTML = '';
+    for(var i=0;i<n;i++){
+      var d=document.createElement('div');
+      d.innerHTML = '<span>'+t[i]+'</span><span class="miss">부재</span>';
+      crmCalls.appendChild(d);
+    }
+  }
+
+  function typeInto(el, text, delay){
+    el.textContent = '';
+    if(reduce){ el.textContent = text; el.classList.add('filled'); return; }
+    var i = 0;
+    var id = setInterval(function(){
+      i++;
+      el.innerHTML = text.slice(0,i) + '<span class="caret"></span>';
+      if(i >= text.length){
+        clearInterval(id);
+        el.textContent = text;
+        el.classList.add('filled');
+      }
+    }, 55);
+    typing.push(id);
+    setTimeout(function(){}, delay);
+  }
+
+  function clearTyping(){ typing.forEach(clearInterval); typing = []; }
+
+  function go(i){
+    if(i < 0 || i >= STEPS.length) return;
+    cur = i;
+    clearTyping();
+    var st = STEPS[i];
+
+    simBadge.textContent = st.b;
+    simHead.textContent = st.h;
+    simNote.textContent = st.n;
+    stepno.textContent = (i+1) + ' / ' + STEPS.length;
+
+    dots.forEach(function(d,k){
+      d.className = 'dot' + (k < i ? ' done' : (k === i ? ' cur' : ''));
+    });
+
+    screens.forEach(function(sc){ sc.classList.toggle('on', sc.dataset.s === st.s); });
+
+    /* 상세 화면 상태 */
+    var owner='이영준', state='배정', calls=0;
+    for(var k=0;k<=i;k++){
+      if(STEPS[k].owner) owner = STEPS[k].owner;
+      if(STEPS[k].state) state = STEPS[k].state;
+      if(STEPS[k].calls) calls = STEPS[k].calls;
+    }
+    crmOwner.textContent = owner;
+    crmState.textContent = state;
+    renderCalls(calls);
+    pickBtn.textContent = (i >= 8) ? '획득 완료' : '획득';
+    pickBtn.className = 'pickbtn' + (i >= 8 ? ' off' : '');
+
+    /* 폼 타이핑 */
+    if(st.type){
+      var f1=document.getElementById('f1'),f2=document.getElementById('f2'),f3=document.getElementById('f3');
+      [f1,f2,f3].forEach(function(f){ f.classList.remove('filled'); f.textContent=''; });
+      typeInto(f1,'김도현');
+      setTimeout(function(){ typeInto(f2,'010-2847-****'); }, reduce?0:700);
+      setTimeout(function(){ typeInto(f3,'그랜저 IG'); }, reduce?0:1700);
+    }
+
+    /* 원장 재구성 */
+    var rows = [], seq = 0;
+    for(var k=0;k<=i;k++){
+      (STEPS[k].rows||[]).forEach(function(r){
+        seq++;
+        rows.push({seq:seq, tbl:r[0], txt:r[1], sub:r[2], fresh:(k===i)});
+      });
+    }
+    if(!rows.length){
+      ledger.innerHTML = '<p class="ledgerempty">아직 아무 기록도 없습니다.</p>';
+    } else {
+      ledger.innerHTML = '';
+      rows.forEach(function(r){
+        var d = document.createElement('div');
+        d.className = 'lrow locked' + (r.fresh ? ' new' : '');
+        d.innerHTML = '<span class="seq">'+r.seq+'</span><span class="tbl">'+r.tbl+'</span>'+
+                      '<span class="txt">'+r.txt+'<small>'+(r.sub||'')+'</small></span>';
+        ledger.appendChild(d);
+      });
+    }
+
+    /* 강조 문구 */
+    var callTxt = null;
+    for(var k=0;k<=i;k++){ if(STEPS[k].call) callTxt = STEPS[k].call; }
+    if(STEPS[i].call){ callout.textContent = STEPS[i].call; callout.classList.add('on'); }
+    else if(callTxt && i > 0){ callout.textContent = callTxt; callout.classList.add('on'); }
+    else { callout.classList.remove('on'); }
+
+    renderStats(i >= STEPS.length - 1);
+  }
+
+  function next(){
+    if(cur >= STEPS.length - 1){ stop(); return; }
+    go(cur + 1);
+    schedule();
+  }
+  function schedule(){
+    clearTimeout(timer);
+    var d = STEPS[cur] && STEPS[cur].type ? 4200 : 3000;
+    timer = setTimeout(next, d);
+  }
+  function play(){
+    if(cur >= STEPS.length - 1) go(0);
+    playing = true; playBtn.textContent = '일시정지';
+    if(cur < 0) go(0);
+    schedule();
+  }
+  function stop(){
+    playing = false; playBtn.textContent = '재생';
+    clearTimeout(timer); clearTyping();
+  }
+
+  playBtn.addEventListener('click', function(){ playing ? stop() : play(); });
+  resetBtn.addEventListener('click', function(){ stop(); go(0); });
+
+  go(0);
+
+  /* 화면에 들어오면 한 번 자동 재생 */
+  if(!reduce && 'IntersectionObserver' in window){
+    var once = false;
+    var io = new IntersectionObserver(function(en){
+      en.forEach(function(e){
+        if(e.isIntersecting && !once){ once = true; setTimeout(play, 1400); io.disconnect(); }
+      });
+    }, {threshold:.35});
+    io.observe(document.getElementById('sim'));
+  }
+})();
+</script>
+</body>
+</html>
